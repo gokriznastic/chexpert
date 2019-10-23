@@ -72,7 +72,9 @@ num_classes = 5
 class_names = ['Atelectasis', 'Cardiomegaly', 'Consolidation', 'Edema', 'Pleural Effusion']
 
 val_csv = 'CheXpert-v1.0-small/valid.csv'
-test_images, test_labels = getImagesLabels(val_csv, 'ones')
+# test_images, test_labels = getImagesLabels(val_csv, 'ones')
+test_images, test_labels = getImagesLabels(val_csv, policy='both')
+
 
 print('Testing on {} images\n'.format(len(test_images)))
 
@@ -82,7 +84,7 @@ test_loader = DataLoader(test_dataset, batch_size=16, shuffle=False,  num_worker
 model = DenseNet121(num_classes, test=True)
 model = torch.nn.DataParallel(model)
 
-pred, gt = test(test_loader, model, '10-10-2019-19:13:51_model.pt', device, num_classes, class_names) # U-ignore
+pred, gt = test(test_loader, model, 'checkpoints/22-10-2019-18:53:28_model.pt', device, num_classes, class_names) # U-ignore
 plot_ROC(pred, gt, num_classes, class_names)
 
 pred[pred>=0.5] = 1

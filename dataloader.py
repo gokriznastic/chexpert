@@ -1,18 +1,24 @@
 import random
-
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from PIL import Image
-from scipy.ndimage.filters import gaussian_filter
-from scipy.ndimage.interpolation import map_coordinates
+
 from torchvision import transforms
 
 import torch
 from torch.utils.data import Dataset
 from utils import multihot
+from image_utils import clahe, get_aug
 
-random_state = np.random.RandomState(0)
+
+# def getImagesLabels(filename):
+#     df = pd.read_csv(filename)
+
+#     X = df['Path']
+#     y = df[['Atelectasis', 'Cardiomegaly', 'Consolidation', 'Edema', 'Pleural Effusion']]
+
+#     return np.asarray(X), np.asarray(y)
 
 def getImagesLabels(filename, policy):
     """
@@ -46,34 +52,6 @@ def getImagesLabels(filename, policy):
 
     return np.asarray(X), np.asarray(y)
 
-def elastic_transform(image, alpha, sigma):
-    image = np.asarray(image)
-
-    if len(image.shape) < 3:
-        image = image.reshape(image.shape[0], image.shape[1], -1)
-
-    shape = image.shape
-
-    dx = gaussian_filter((random_state.rand(*shape) * 2 - 1), sigma, mode="constant", cval=0) * alpha
-    dy = gaussian_filter((random_state.rand(*shape) * 2 - 1), sigma, mode="constant", cval=0) * alpha
-    dz = np.zeros_like(dx)
-
-    x, y, z = np.meshgrid(np.arange(shape[0]), np.arange(shape[1]), np.arange(shape[2]), indexing='ij')
-    indices = np.reshape(x + dx, (-1, 1)), np.reshape(y + dy, (-1, 1)), np.reshape(z, (-1, 1))
-
-    distorted_image = map_coordinates(image, indices, order=0, mode='reflect')
-
-    return Image.fromarray(distorted_image.reshape(image.shape))
-
-def get_aug(image, index):
-    if (index == 0):
-        return image
-    else:
-        alpha = np.random.uniform(10,100)
-        sigma = np.random.uniform(10,15)
-        input_transformed= elastic_transform(image, alpha=alpha, sigma=sigma)
-        return  input_transformed
-
 
 class CheXpertDataset(Dataset):
     def __init__(self, image_list, labels, transform=None, test=False):
@@ -96,13 +74,18 @@ class CheXpertDataset(Dataset):
         """Take the index of item and returns the image and its labels"""
 
         image_name = self.image_names[index]
-        image = Image.open(image_name).convert('RGB')
+        # image = Image.open(image_name).convert('RGB')
+        image = clahe(image_name)
+
         label = self.labels[index]
         gt = self.gt[index]
 
-        # index = random.randint(0,3)
+        # index = random.choice([0,1,2,3])
         # if (self.test==False):
         #     image = get_aug(image, index)
+
+        # plt.imshow(image)
+        # plt.show()
 
         if self.transform is not None:
             image = self.transform(image)
@@ -120,12 +103,3 @@ class CheXpertDataset(Dataset):
 
     def __len__(self):
         return len(self.image_names)
-
-
-# x, y = getImagesLabels('CheXpert-v1.0-small/train.csv', 'both')
-# dataset = CheXpertDataset(x,y)
-# train_loader = torch.utils.data.DataLoader(dataset, batch_size=20, shuffle=True)
-
-# it = iter(train_loader)
-# t = next(it)
-# print(t[0].shape, t[1].shape)

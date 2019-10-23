@@ -1,6 +1,6 @@
 import torch
 from torch import optim
-from torch.optim.lr_scheduler import ReduceLROnPlateau
+from torch.optim.lr_scheduler import ReduceLROnPlateau, StepLR
 from datetime import datetime
 import numpy as np
 import matplotlib.pyplot as plt
@@ -46,7 +46,8 @@ class Trainer():
         self.loss_fn = loss_fn
 
         if (scheduler):
-            self.scheduler = ReduceLROnPlateau(self.optimizer, mode='min', factor=0.5, patience=4, verbose=True)
+            self.scheduler = ReduceLROnPlateau(self.optimizer, mode='min', factor=0.1, patience=2, verbose=True, min_lr=1e-6)
+            # self.scheduler = StepLR(self.optimizer, step_size=5, gamma=0.1)
 
     def load_checkpoint(self, log_path, model_path):
         """ Function to load checkpoints from a previously saved model
@@ -89,7 +90,7 @@ class Trainer():
         # return start_epoch, self.model, self.optimizer, self.losses, val_min
 
 
-    def epoch_train(self):
+    def epoch_train(self, print_every=50):
         model = self.model
         loss_fn = self.loss_fn
         optimizer = self.optimizer
@@ -110,7 +111,7 @@ class Trainer():
             loss.backward()
             optimizer.step()
 
-            if (batch_idx % 50 == 0):
+            if (batch_idx % print_every == 0):
                 print('Epoch {}\tBatch [{}/{}]\t\tTraining Loss: {}'.format(self.epoch+1, batch_idx+1, len(self.train_loader), train_loss))
 
         return train_loss
@@ -180,7 +181,7 @@ class Trainer():
 
             # self.epoch = epoch
 
-            train_loss = self.epoch_train()
+            train_loss = self.epoch_train(print_every=500)
             valid_loss = self.epoch_val()
 
             print(self.log('\nEpoch: [{}/{}] \tTraining Loss: {:.5f} \tValidation Loss: {:.5f}\n'.format(
